@@ -1,0 +1,3 @@
+"""
+    Defines SQLalchemy base class
+"""
