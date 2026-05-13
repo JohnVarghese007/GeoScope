@@ -1,3 +1,3 @@
 """
-    Defines SQLalchemy base class
+Defines SQLalchemy base class
 """

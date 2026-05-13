@@ -1,6 +1,14 @@
 # Backend Info
 
-We will be using uv for this project instead of pip since its fast and keeps track of all dependencies installed and such.
+We will be using **uv** for this project instead of pip since its fast and keeps track of all dependencies installed and such.
+
+Check to see if you have uv installed
+> uv --version
+
+If you dont, install uv
+>(dont remember exactly but should be just)
+> pip install uv
+
 
 To create venv
 > uv venv
