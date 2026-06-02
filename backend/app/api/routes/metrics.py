@@ -2,10 +2,6 @@ from fastapi import APIRouter
 
 """
     API endpoints related to metrics can be defined here.
-    For example:
-    - GET /metrics/global
-    - GET /metrics/trends
-    - GET /metrics/heatmap
 """
 
 router = APIRouter()
