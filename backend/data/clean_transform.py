@@ -1,11 +1,11 @@
-# Clean data as required so that it can be used by frontend
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
 
+
 RAW_CSV = Path("data/raw/acled_raw.csv")
-OUT_PARQUET = Path("data/processed/acled_clean.parquet")
+OUT_PARQUET = Path("data/processed/clean/acled_clean.parquet")
 
 
 def load_raw_csv(path: Path) -> pd.DataFrame:
@@ -45,15 +45,14 @@ def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_parquet(df: pd.DataFrame, path: Path):
     print(f"Writing Parquet to {path} ...")
-    path.parent.mkdir(parents=True, exist_ok=True)
     table = pa.Table.from_pandas(df, preserve_index=False)
+    path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, path)
     print("Parquet write complete.")
 
 
-def clean_acled_raw():
-    """Clean raw ACLED CSV and write Parquet."""
-    print("=== ACLED CLEAN + TRANSFORM START ===")
+def main():
+    print("=== ACLED CLEAN + TRANSFORM PIPELINE START ===")
 
     df = load_raw_csv(RAW_CSV)
     df = drop_duplicate_columns(df)
@@ -62,4 +61,9 @@ def clean_acled_raw():
 
     write_parquet(df, OUT_PARQUET)
 
-    print(f"=== CLEAN COMPLETE  {OUT_PARQUET} ===")
+    print("=== PIPELINE COMPLETE ===")
+    print(f"Cleaned Parquet saved to: {OUT_PARQUET}")
+
+
+if __name__ == "__main__":
+    main()

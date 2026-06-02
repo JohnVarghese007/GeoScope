@@ -1,20 +1,18 @@
-"""
-Fetches data at some interval from whatever source  we are using in order to update the database.
-"""
+from dotenv import load_dotenv
 import os
+import requests
 import time
 import csv
-import requests
-from pathlib import Path
-from app.core.config import settings
+
+load_dotenv(dotenv_path="data/.env")
+
+USERNAME = os.getenv("ACLED_USERNAME")
+PASSWORD = os.getenv("ACLED_PASSWORD")
 
 TOKEN_URL = "https://acleddata.com/oauth/token"
 API_URL = "https://acleddata.com/api/acled/read"
 
-RAW_DIR = Path("backend/data/raw")
-RAW_DIR.mkdir(parents=True, exist_ok=True)
-
-OUTPUT_FILE = RAW_DIR / "acled_raw.csv"
+OUTPUT_FILE = "acled_global.csv"
 
 START_YEAR = 2018
 END_YEAR = 2025
@@ -22,8 +20,8 @@ END_YEAR = 2025
 
 def get_access_token():
     data = {
-        "username": settings.ACLED_USERNAME,
-        "password": settings.ACLED_PASSWORD,
+        "username": USERNAME,
+        "password": PASSWORD,
         "grant_type": "password",
         "client_id": "acled",
         "scope": "authenticated",
@@ -51,19 +49,22 @@ def fetch_page(year, page, token):
     return r.json()
 
 
-def download_acled_raw():
-    """Download ACLED data into backend/data/raw/acled_raw.csv."""
-    print("=== ACLED RAW DOWNLOAD START ===")
-
+def main():
     token = get_access_token()
-    file_exists = OUTPUT_FILE.exists()
+
+    file_exists = os.path.isfile(OUTPUT_FILE)
 
     with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as f:
         writer = None
 
         for year in range(START_YEAR, END_YEAR + 1):
             print(f"Downloading year {year}...")
-            page = 1
+
+            # MANUAL RESUME POINT
+            if year == 2018:
+                page = 380
+            else:
+                page = 1
 
             while True:
                 try:
@@ -94,4 +95,8 @@ def download_acled_raw():
                 page += 1
                 time.sleep(0.2)
 
-    print(f"=== RAW DOWNLOAD COMPLETE → {OUTPUT_FILE} ===")
+    print("Done! Global ACLED dataset saved to:", OUTPUT_FILE)
+
+
+if __name__ == "__main__":
+    main()
