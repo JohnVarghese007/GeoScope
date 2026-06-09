@@ -8,7 +8,7 @@ GeoScope is a modern platform for exploring global events, metrics, and geospati
 
 ## Team:
 - Xiangtao Wu
-- Kevin Dupi
+- Kevin Dupigny
 - John Varghese
 
 ---
