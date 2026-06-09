@@ -28,6 +28,9 @@ To run any file with uv
 To run backend with uv
 > uv run uvicorn app.main:app --reload
 
+To update the geojson/ingested data, go to update.py, select what parts of the ingestion pipeline you want to run and then in the terminal in backend/
+> uv run python -m app.ingestion.update
+
 ## Sample Project Structure
 - Can be changed to whatever, this is just a basic scaffolding
 ```bash
@@ -50,7 +53,7 @@ backend/
 │   │   └── models/               # Database models
 │   │       ├── country.py
 │   │       └── event.py
-│   ├── ingestion/                # To automatically update info at fixed intervals and update DB
+│   ├── ingestion/                # To modularized ingestion pipeline code
 │   │   ├── clean_data.py
 │   │   ├── fetch_data.py
 │   │   └── update.py
@@ -65,6 +68,9 @@ backend/
 ├── data/   # To store any CSVs, JSON/metdata etc.
 │   ├── raw/
 │   └── processed/
+│       ├── aggregates/
+│       ├── clean/
+│       └── geojson/
 ├── .env
 ├── .env.example                  
 ├── .python-version
