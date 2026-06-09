@@ -19,9 +19,6 @@ EVENTS_GEOJSON = GEOJSON_DIR / "acled_points.geojson"
 COUNTRIES_GEOJSON = GEOJSON_DIR / "acled_countries.geojson"
 
 
-# ============================================================
-# 1. COUNTRY‑LEVEL AGGREGATES
-# ============================================================
 
 def build_country_aggregates():
     """Compute country-level metrics from cleaned ACLED data."""
@@ -40,10 +37,6 @@ def build_country_aggregates():
 
     print(f"Country aggregates saved to {COUNTRY_AGG}")
 
-
-# ============================================================
-# 2. EVENTS GEOJSON (POINTS)
-# ============================================================
 
 def build_events_geojson():
     print("=== BUILDING EVENTS GEOJSON (STREAMING) ===")
@@ -87,26 +80,69 @@ def build_events_geojson():
 
 
 
-# ============================================================
-# 3. COUNTRY GEOJSON (POLYGONS + METRICS)
-# ============================================================
-def build_country_geojson():
-    """Merge country aggregates with world polygons to produce a choropleth-ready GeoJSON."""
-    print("=== BUILDING COUNTRY POLYGON GEOJSON ===")
+def build_country_year_geojson():
+    """
+    Build a GeoJSON FeatureCollection where each Feature represents
+    a country-year aggregate with centroid geometry and metrics.
+    """
+    print("=== BUILDING COUNTRY-YEAR AGGREGATE GEOJSON ===")
 
-    # Load aggregates
-    agg = pd.read_parquet(COUNTRY_AGG)
+    df = pd.read_parquet(CLEAN_PARQUET)
 
-    # Load Natural Earth polygons
-    from pathlib import Path
-    NE_PATH = Path("data/external/natural_earth/ne_110m_admin_0_countries.shp")
-    world = gpd.read_file(NE_PATH)
+    # Ensure event_date is datetime
+    df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")
+    df["year"] = df["event_date"].dt.year
 
-    # Merge using ISO codes (correct + reliable)
-    merged = world.merge(agg, left_on="ISO_A3", right_on="iso", how="left")
+    # Group by country + year
+    agg = (
+        df.groupby(["iso", "country", "year"], as_index=False)
+          .agg(
+              event_count=("event_id_cnty", "count"),
+              fatalities_total=("fatalities", "sum"),
+              lat_mean=("latitude", "mean"),
+              lon_mean=("longitude", "mean"),
+          )
+    )
 
-    # Save output
     GEOJSON_DIR.mkdir(parents=True, exist_ok=True)
-    merged.to_file(COUNTRIES_GEOJSON, driver="GeoJSON")
+    out_path = GEOJSON_DIR / "country_year_aggregates.geojson"
 
-    print(f"Country polygons GeoJSON saved to {COUNTRIES_GEOJSON}")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write('{"type": "FeatureCollection", "features": [')
+
+        first = True
+
+        for _, row in agg.iterrows():
+            lat = row["lat_mean"]
+            lon = row["lon_mean"]
+
+            # Skip if centroid is missing
+            if pd.isna(lat) or pd.isna(lon):
+                continue
+
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(lon), float(lat)],
+                },
+                "properties": {
+                    "iso": row["iso"],
+                    "country": row["country"],
+                    "year": int(row["year"]),
+                    "event_count": int(row["event_count"]),
+                    "fatalities_total": int(row["fatalities_total"]),
+                    "lat_mean": float(lat),
+                    "lon_mean": float(lon),
+                }
+            }
+
+            if not first:
+                f.write(",")
+            first = False
+
+            f.write(json.dumps(feature))
+
+        f.write("]}")
+
+    print(f"Country-year aggregate GeoJSON saved to {out_path}")

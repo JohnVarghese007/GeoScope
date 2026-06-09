@@ -3,33 +3,39 @@ from app.ingestion.clean_data import clean_acled_raw
 from app.services.ingestion_service import (
     build_country_aggregates,
     build_events_geojson,
-    build_country_geojson,
+    build_country_year_geojson,
 )
 
+def run_pipeline(
+        download : bool = False,
+        clean : bool = False,
+        aggregates : bool = False,
+        events_geojson : bool = False,
+        country_year_geojson : bool = False
+    ):
 
-def run_all():
-    download_acled_raw()
-    clean_acled_raw()
-    build_country_aggregates()
-    build_events_geojson()
-    build_country_geojson()
+    print("\n=== RUNNING INGESTION PIPELINE  ===\n")
+    if download:
+        download_acled_raw()
+    if clean:
+        clean_acled_raw()
+    if aggregates:
+        build_country_aggregates()
+    if events_geojson:
+        build_events_geojson()
+    if country_year_geojson:
+        build_country_year_geojson()
 
-
-def run_download_only():
-    download_acled_raw()
-
-
-def run_clean_only():
-    clean_acled_raw()
-
-
-def run_aggregates_only():
-    build_country_aggregates()
-
-
-def run_events_geojson_only():
-    build_events_geojson()
+    print("\n=== INGESTION PIPELINE COMPLETE ===\n")
 
 
-def run_country_geojson_only():
-    build_country_geojson()
+if __name__ == "__main__":
+    # Change arguments here as required to run desired steps in pipeline
+    run_pipeline(
+        download=False,
+        clean=False,
+        aggregates=False,
+        events_geojson=False,
+        country_year_geojson=True
+    )
+

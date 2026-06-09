@@ -1,16 +1,6 @@
-export type CountryDetails = {
-  country: string;
-  iso_codes: string[];
-  regions: string[];
-  total_events: number;
-  total_fatalities: number;
-  first_event_date: string | null;
-  latest_event_date: string | null;
-  top_sub_event_types: Record<string, number>;
-};
-
 import { AxiosError } from 'axios';
 import { apiClient } from './client';
+import type { CountryDetails } from './types';
 
 type ApiErrorResponse = {
   detail?: string;
@@ -26,18 +16,15 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Request failed';
 }
 
-export async function fetchCountryDetails(countryIdentifier: string): Promise<CountryDetails> {
-  const trimmedIdentifier = countryIdentifier.trim();
+export async function fetchCountryDetails(iso: string): Promise<CountryDetails> {
+  const trimmedIso = (iso || '').trim().toUpperCase();
 
-  if (!trimmedIdentifier) {
-    throw new Error('Country identifier is required');
+  if (!trimmedIso) {
+    throw new Error('Country ISO code is required');
   }
 
   try {
-    const response = await apiClient.get<CountryDetails>(
-      `/countries/${encodeURIComponent(trimmedIdentifier)}`,
-    );
-
+    const response = await apiClient.get<CountryDetails>(`/countries/${encodeURIComponent(trimmedIso)}`);
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error));
