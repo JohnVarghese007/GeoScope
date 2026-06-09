@@ -36,6 +36,6 @@ if __name__ == "__main__":
         clean=False,
         aggregates=False,
         events_geojson=False,
-        country_year_geojson=True
+        country_year_geojson=False
     )
 
