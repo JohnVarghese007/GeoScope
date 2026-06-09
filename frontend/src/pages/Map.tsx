@@ -4,7 +4,9 @@ import 'leaflet/dist/leaflet.css'
 
 type Layer = 'crime' | 'weather' | 'economy'
 
-//TODO IMPLEMENT HOVER COUNTRIES AND BORDERS
+
+
+
 
 const LAYER_COLORS: Record<Layer, [string, string]> = {
     crime:   ['#f09595', '#e24b4a'],
@@ -50,66 +52,7 @@ export default function Map() {
     const [activeLayer, setActiveLayer] = useState<Layer>('crime')
     const [hoveredCountry, setHoveredCountry] = useState<string | null>(null)
     const activeLayerRef = useRef<Layer>('crime')
-
-    useEffect(() => {
-        if (!mapRef.current || mapInstanceRef.current) return
-
-        const map = L.map(mapRef.current, {
-            center: [20, 0],
-            zoom: 2,
-            minZoom: 2,
-            maxZoom: 8,
-            zoomControl: false,
-        })
-        mapInstanceRef.current = map
-
-        // Dark tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-            attribution: '©OpenStreetMap ©CartoDB',
-            subdomains: 'abcd',
-        }).addTo(map)
-
-        // Load GeoJSON borders
-        fetch('/data/countries.geojson')
-            .then(r => r.json())
-            .then(data => {
-                const geojsonLayer = L.geoJSON(data, {
-                    style: () => ({
-                        fillColor: '#1a2a3a',
-                        fillOpacity: 0.6,
-                        color: 'rgba(255,255,255,0.25)',
-                        weight: 0.8,
-                    }),
-                    onEachFeature: (feature, layer) => {
-                        const name =
-                            feature.properties?.NAME ??
-                            feature.properties?.name ??
-                            'Unknown'
-
-                        layer.on('mouseover', (e) => {
-                            setHoveredCountry(name)
-                            const l = e.target as L.Path
-                            l.setStyle({ fillOpacity: 0.9, weight: 1.5, color: 'rgba(255,255,255,0.6)' })
-                            l.bringToFront()
-                        })
-
-                        layer.on('mouseout', (e) => {
-                            setHoveredCountry(null)
-                            geojsonLayer.resetStyle(e.target)
-                            applyHeatmapStyle(geojsonLayer, activeLayerRef.current)
-                        })
-                    },
-                }).addTo(map)
-
-                geojsonLayerRef.current = geojsonLayer
-                applyHeatmapStyle(geojsonLayer, activeLayerRef.current)
-            })
-
-        return () => {
-            map.remove()
-            mapInstanceRef.current = null
-        }
-    }, [])
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
     const applyHeatmapStyle = (layer: L.GeoJSON, activeLayer: Layer) => {
         const data = MOCK_DATA[activeLayer]
@@ -134,6 +77,78 @@ export default function Map() {
         })
     }
 
+    useEffect(() => {
+        if (!mapRef.current || mapInstanceRef.current) return
+
+        const map = L.map(mapRef.current, {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 8,
+            zoomControl: false,
+        })
+
+        map.getContainer().style.cursor = 'default'
+
+        mapInstanceRef.current = map
+
+        mapRef.current.addEventListener('mousemove', (e: MouseEvent) => {
+            setMousePos({ x: e.clientX, y: e.clientY })
+        })
+
+        // Dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '©OpenStreetMap ©CartoDB',
+            subdomains: 'abcd',
+        }).addTo(map)
+
+        // Load GeoJSON borders
+        fetch('/data/countries.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const geojsonLayer = L.geoJSON(data, {
+                    interactive: true,
+                    style: () => ({
+                        fillColor: '#1a2a3a',
+                        fillOpacity: 0.6,
+                        color: 'rgba(255,255,255,0.25)',
+                        weight: 0.8,
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        console.log(feature.properties)
+                        const name =
+                            feature.properties?.NAME ??
+                            feature.properties?.name ??
+                            'Unknown'
+
+                        layer.on('mouseover', (e) => {
+                            setHoveredCountry(name)
+                            map.getContainer().style.cursor = 'pointer'
+                            const l = e.target as L.Path
+                            l.setStyle({ fillOpacity: 0.9, weight: 1.5, color: 'rgba(255,255,255,0.6)' })
+                            l.bringToFront()
+                        })
+
+                        layer.on('mouseout', (e) => {
+                            setHoveredCountry(null)
+                            map.getContainer().style.cursor = 'default'
+                            geojsonLayer.resetStyle(e.target)
+                            applyHeatmapStyle(geojsonLayer, activeLayerRef.current)
+                        })
+                    },
+                }).addTo(map)
+
+                geojsonLayerRef.current = geojsonLayer
+                applyHeatmapStyle(geojsonLayer, activeLayerRef.current)
+            })
+
+        return () => {
+            map.remove()
+            mapInstanceRef.current = null
+        }
+    }, [])
+
+
     const switchLayer = (layer: Layer) => {
         setActiveLayer(layer)
         activeLayerRef.current = layer
@@ -154,6 +169,7 @@ export default function Map() {
         { key: 'economy', label: 'Economy' },
     ]
 
+
     return (
         <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
             <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
@@ -161,11 +177,20 @@ export default function Map() {
             {/* Country tooltip */}
             {hoveredCountry && (
                 <div style={{
-                    position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
-                    background: 'rgba(8,14,26,0.92)', border: '0.5px solid rgba(255,255,255,0.15)',
-                    borderRadius: '8px', padding: '6px 16px', color: '#e8edf5',
-                    fontSize: '14px', fontWeight: 500, pointerEvents: 'none',
-                    backdropFilter: 'blur(8px)', zIndex: 1000,
+                    position: 'fixed',
+                    left: mousePos.x + 14,
+                    top: mousePos.y - 10,
+                    background: 'rgba(8,14,26,0.92)',
+                    border: '0.5px solid rgba(255,255,255,0.15)',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    color: '#e8edf5',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    pointerEvents: 'none',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 1000,
+                    whiteSpace: 'nowrap',
                 }}>
                     {hoveredCountry}
                 </div>
